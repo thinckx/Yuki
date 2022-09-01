@@ -73,7 +73,8 @@ class Yuki
      * @return bool
      * @throws ResponseException
      */
-    public function ProcessInvoice(array $invoice, bool $escaped = false): bool {
+    public function ProcessInvoice(array $invoice, bool $escaped = false): bool
+    {
         if (!$escaped) {
             array_walk_recursive($invoice, function (&$_v) {
                 $_v = htmlspecialchars(trim($_v), ENT_XML1);
@@ -140,7 +141,7 @@ class Yuki
         $return = $this->ProcessSalesInvoices(['sessionId' => $this->sid, 'administrationId' => $this->aid, 'xmlDoc' => $xmlDoc]);
 
         // Check the result to see whether it was succesful
-        $result_xml = simplexml_load_string($return['ProcessSalesInvoicesResult']);
+        $result_xml = simplexml_load_string($return->ProcessSalesInvoicesResult);
         if (!$result_xml->TotalSucceeded->__toString()) {
             // None succeeded, so throw the error message.
             throw new ResponseException($result_xml->Invoice->Message, $result_xml->asXML());
@@ -149,9 +150,10 @@ class Yuki
     }
 
 
-    public function GetInvoiceBalance($invoiceReference): array {
+    public function GetInvoiceBalance($invoiceReference): array
+    {
         $yuki_invoice = $this->CheckOutstandingItem(['sessionID' => $this->sid, 'Reference' => $invoiceReference]);
-        $xml = simplexml_load_string($yuki_invoice['CheckOutstandingItemResult']->any);
+        $xml = simplexml_load_string($yuki_invoice->CheckOutstandingItemResult->any);
 
         return [
             "openAmount" => floatval($xml->Item->OpenAmount),
@@ -179,12 +181,13 @@ class Yuki
      * @return string AdministrationID
      * @throws Exception
      */
-    private function aid(): string {
+    private function aid(): string
+    {
         // could maybe be saved to DB the first time, but an API key might later get attached to a different Administration...
         $result = $this->Administrations(['sessionID' => $this->sid]);
         // Save and return the result
         try {
-            $xml = simplexml_load_string($result['AdministrationsResult']);
+            $xml = simplexml_load_string($result->AdministrationsResult);
             return $xml->Administration->attributes()['ID'];
         } catch (Exception $e) {
             throw new Exception('Yuki authentication failed. The API key works, but it does not seem to have access to any Administration.');
@@ -197,12 +200,13 @@ class Yuki
      * @return string sessionID
      * @throws Exception
      */
-    private function sid(string $api_key): string {
+    private function sid(string $api_key): string
+    {
         $result = $this->Authenticate(['accessKey' => $api_key]);
 
         // Save and return the result
-        if ($result && !empty($result['AuthenticateResult'])) {
-            return $result['AuthenticateResult'];
+        if ($result && !empty($result->AuthenticateResult)) {
+            return $result->AuthenticateResult;
         } else {
             throw new Exception('Authentication failed. Please check your company\'s Yuki accessKey.');
         }
@@ -213,7 +217,8 @@ class Yuki
      * (small g because it's a class function rather than a web call)
      * @return ?string
      */
-    public function getAdministrationID(): ?string {
+    public function getAdministrationID(): ?string
+    {
         return $this->aid;
     }
 
@@ -225,7 +230,8 @@ class Yuki
      * @return mixed Response
      * @throws Exception
      */
-    public function __call(string $method, array $params) {
+    public function __call(string $method, array $params)
+    {
         try {
             return $this->soap->__soapCall($method, $params);
         } catch (Exception $e) {
@@ -241,7 +247,8 @@ class Yuki
      * @param string $wsdl 'sales' or 'accounting'.
      * @throws Exception If the SOAP client could not be instantiated, or the login failed.
      */
-    public function __construct(string $apikey = null, string $wsdl = 'sales', string $aid = null) {
+    public function __construct(string $apikey = null, string $wsdl = 'sales', string $aid = null)
+    {
         $this->soap = new SoapClient($this->getWSDL($wsdl), ['trace' => true]);
         if ($apikey) {
             $this->login($apikey, $aid);
@@ -252,7 +259,8 @@ class Yuki
      * @param string $wsdl name of the corresponding WSDL.
      * @return string URL of the corresponding WSDL.
      */
-    private function getWSDL(string $wsdl): string {
+    private function getWSDL(string $wsdl): string
+    {
         switch ($wsdl) {
             case 'accounting':
                 return self::ACCOUNTING_WSDL;
@@ -270,7 +278,8 @@ class Yuki
      * @return object
      * @throws Exception
      */
-    public function GetAdministrationNetRevenue(string $start, string $end): object {
+    public function GetAdministrationNetRevenue(string $start, string $end): object
+    {
         try {
             return $this->NetRevenue(['sessionID' => $this->sid, 'administrationID' => $this->aid, 'StartDate' => $start, 'EndDate' => $end]);
         } catch (Exception $e) {
@@ -283,7 +292,8 @@ class Yuki
      * @return object
      * @throws Exception
      */
-    public function GetAccountBalance(string $date): object {
+    public function GetAccountBalance(string $date): object
+    {
         try {
             return $this->GLAccountBalance(['sessionID' => $this->sid, 'administrationID' => $this->aid, 'transactionDate' => $date]);
         } catch (Exception $e) {
@@ -295,7 +305,8 @@ class Yuki
      * @return object
      * @throws Exception
      */
-    public function GetAccountCodes(): object {
+    public function GetAccountCodes(): object
+    {
         try {
             return $this->GetGLAccountScheme(['sessionID' => $this->sid, 'administrationID' => $this->aid]);
         } catch (Exception $e) {
@@ -310,7 +321,8 @@ class Yuki
      * @return object
      * @throws Exception
      */
-    public function GetTransactions($accountCode, $start, $end): object {
+    public function GetTransactions($accountCode, $start, $end): object
+    {
         try {
             return $this->GLAccountTransactions(['sessionID' => $this->sid, 'administrationID' => $this->aid, 'GLAccountCode' => $accountCode, 'StartDate' => $start, 'EndDate' => $end]);
         } catch (Exception $e) {
