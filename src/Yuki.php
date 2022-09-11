@@ -187,7 +187,7 @@ class Yuki
         $result = $this->Administrations(['sessionID' => $this->sid]);
         // Save and return the result
         try {
-            $xml = simplexml_load_string($result->AdministrationsResult);
+            $xml = simplexml_load_string($result->AdministrationsResult->any ?? $result->AdministrationsResult);
             return $xml->Administration->attributes()['ID'];
         } catch (Exception $e) {
             throw new Exception('Yuki authentication failed. The API key works, but it does not seem to have access to any Administration.');
