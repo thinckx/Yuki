@@ -441,4 +441,18 @@ class Yuki
             throw new Exception($e->getMessage());
         }
     }
+
+    /**
+     * @return object
+     * @throws Exception
+     */
+    public function structure(): object
+    {
+        try {
+            return $this->CostCategories(['sessionID' => $this->sid, 'administrationID' => $this->aid()]);
+        } catch (Exception $e) {
+            $msg = 'Could not retrieve structure for administration ' . $this->aid . ' and session: ' . $this->sid;
+            throw new Exception($msg);
+        }
+    }
 }
