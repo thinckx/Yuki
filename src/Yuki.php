@@ -29,9 +29,11 @@ use Exception, SoapClient, SoapVar;
  */
 class Yuki
 {
-    private const SALES_WSDL = 'https://api.yukiworks.nl/ws/Sales.asmx?WSDL';
-    private const ACCOUNTING_WSDL = 'https://api.yukiworks.nl/ws/Accounting.asmx?WSDL';
-    private const ACCOUNTINGINFO_WSDL = 'https://api.yukiworks.nl/ws/AccountingInfo.asmx?WSDL';
+    /** Yuki regional gateways. Both serve the same operation set; pick
+     *  per administration country. NL is the historical default. */
+    private const REGIONS = ['nl', 'be'];
+    private const WSDL_HOSTS = ['nl' => 'api.yukiworks.nl', 'be' => 'api.yukiworks.be'];
+    private const WSDL_PATHS = ['sales' => 'Sales', 'accounting' => 'Accounting', 'accountinginfo' => 'AccountingInfo'];
 
     private SoapClient $soap; // the SOAP client
 
@@ -40,6 +42,8 @@ class Yuki
     private string $sid;
     // AdministrationID
     private ?string $aid = null;
+    // Region (nl/be) — default nl for backwards compatibility
+    private string $region = 'nl';
 
 
     /**
@@ -243,12 +247,18 @@ class Yuki
     /**
      * Yuki constructor (creates the SOAP client).
      *
-     * @param ?string $apikey If provided, will immediately connect.
-     * @param string $wsdl 'sales' or 'accounting'.
+     * @param ?string $apikey  If provided, will immediately connect.
+     * @param string  $wsdl    'sales' / 'accounting' / 'accountinginfo'.
+     * @param ?string $aid     Administration ID to lock onto (otherwise auto-pick).
+     * @param string  $region  'nl' (default) or 'be' — picks the regional Yuki gateway.
      * @throws Exception If the SOAP client could not be instantiated, or the login failed.
      */
-    public function __construct(string $apikey = null, string $wsdl = 'sales', string $aid = null)
+    public function __construct(string $apikey = null, string $wsdl = 'sales', string $aid = null, string $region = 'nl')
     {
+        if (!in_array($region, self::REGIONS, true)) {
+            throw new Exception("Unsupported Yuki region: {$region}");
+        }
+        $this->region = $region;
         $this->soap = new SoapClient($this->getWSDL($wsdl), ['trace' => true]);
         if ($apikey) {
             $this->login($apikey, $aid);
@@ -261,15 +271,9 @@ class Yuki
      */
     private function getWSDL(string $wsdl): string
     {
-        switch ($wsdl) {
-            case 'accounting':
-                return self::ACCOUNTING_WSDL;
-            case 'accountinginfo':
-                return self::ACCOUNTINGINFO_WSDL;
-            case 'sales':
-            default:
-                return self::SALES_WSDL;
-        }
+        $path = self::WSDL_PATHS[$wsdl] ?? self::WSDL_PATHS['sales'];
+        $host = self::WSDL_HOSTS[$this->region];
+        return "https://{$host}/ws/{$path}.asmx?WSDL";
     }
 
     /**
